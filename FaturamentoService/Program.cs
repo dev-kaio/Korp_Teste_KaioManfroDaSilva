@@ -6,6 +6,15 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=faturamento.db"));
 
 builder.Services.AddControllers();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        policy => policy.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader());
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
@@ -18,5 +27,5 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseMiddleware<ErrorMiddleware>();
-
+app.UseCors("AllowAll");
 app.Run();
