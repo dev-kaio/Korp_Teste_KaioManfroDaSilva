@@ -1,41 +1,62 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text;
+using System.Text.Json;
 
 [ApiController]
 [Route("api/notas")]
 public class NotasController : ControllerBase
 {
-    public readonly AppDbContext _context;
-    public NotasController(AppDbContext context)
+    private readonly AppDbContext _context;
+    private readonly HttpClient _httpClient;
+
+    public NotasController(AppDbContext context, IHttpClientFactory httpClientFactory)
     {
         _context = context;
+        _httpClient = httpClientFactory.CreateClient();
     }
 
     [HttpGet]
     public async Task<IActionResult> GetNotas()
     {
-        var notas = await _context.Notas.Include(n => n.Itens).ToListAsync();
+        var notas = await _context.Notas
+            .Include(n => n.Itens)
+            .ToListAsync();
+
         return Ok(notas);
     }
-
 
     [HttpGet("{id}")]
     public async Task<IActionResult> GetNotaById(int id)
     {
-        var existe = await _context.Notas.Include(n => n.Itens).FirstOrDefaultAsync(n => n.Id == id);
-        if (existe == null) return NotFound();
+        var nota = await _context.Notas
+            .Include(n => n.Itens)
+            .FirstOrDefaultAsync(n => n.Id == id);
 
-        return Ok(existe);
+        if (nota == null)
+            return NotFound();
+
+        return Ok(nota);
     }
 
     [HttpPost]
     public async Task<IActionResult> CriarNota(NotaFiscal nota)
     {
-        if (nota.Itens == null || !nota.Itens.Any()) return BadRequest("A nota deve ter pelo menos um item");
+        if (nota.Itens == null || !nota.Itens.Any())
+            return BadRequest("A nota deve ter pelo menos um item");
 
+        // tratando numeracao sequencial
+        var ultimoNumero = await _context.Notas
+            .Select(n => n.Numero)
+            .DefaultIfEmpty(0)
+            .MaxAsync();
+
+        nota.Numero = ultimoNumero + 1;
         nota.Status = "Aberta";
+
         _context.Notas.Add(nota);
         await _context.SaveChangesAsync();
+
         return CreatedAtAction(nameof(GetNotaById), new { id = nota.Id }, nota);
     }
 
@@ -46,48 +67,68 @@ public class NotasController : ControllerBase
             .Include(n => n.Itens)
             .FirstOrDefaultAsync(n => n.Id == id);
 
-        if (nota == null) return NotFound();
+        if (nota == null)
+            return NotFound();
 
-        if (nota.Status != "Aberta") return BadRequest("Nota já foi fechada");
-
-        // HttpClientFactory seria melhor
-        var client = new HttpClient();
+        if (nota.Status != "Aberta")
+            return BadRequest("Nota já foi fechada");
 
         try
         {
             foreach (var item in nota.Itens)
             {
-                // get no microsserviço de estoque p ver se existe o produto
-                var getResponse = await client.GetAsync($"http://localhost:3000/api/produtos/{item.ProdutoId}");
+                var getResponse = await _httpClient.GetAsync(
+                    $"http://localhost:3000/api/produtos/{item.ProdutoId}"
+                );
 
-                if (!getResponse.IsSuccessStatusCode) throw new Exception("Erro ao consultar estoque");
+                if (!getResponse.IsSuccessStatusCode)
+                    return StatusCode(500, "Erro ao consultar produto no estoque");
 
-                var produtoJson = await getResponse.Content.ReadAsStringAsync(); // htpp como string
-                var produto = System.Text.Json.JsonSerializer.Deserialize<Produto>(produtoJson, new System.Text.Json.JsonSerializerOptions // "quebra" a string p um objeto
+                var produtoJson = await getResponse.Content.ReadAsStringAsync();
+
+                var produto = JsonSerializer.Deserialize<Produto>(produtoJson, new JsonSerializerOptions
                 {
-                    PropertyNameCaseInsensitive = true // ignora maiúsculas/minúsculas, importante pq o json do json-server vem com a primeira letra minuscula
-                }) ?? throw new Exception("Erro ao desserializar produto");
+                    PropertyNameCaseInsensitive = true
+                });
 
-                // validar saldo
-                if (produto.Saldo < item.Quantidade) return BadRequest($"Produto de código {produto.Codigo} sem saldo suficiente");
+                if (produto == null)
+                    return StatusCode(500, "Erro ao desserializar produto");
 
-                // atualizar saldo
+                // tratamento de saldo
+                if (produto.Saldo < item.Quantidade)
+                {
+                    return BadRequest($"Produto {produto.Codigo} sem saldo suficiente");
+                }
+
                 produto.Saldo -= item.Quantidade;
-                var JsonContent = new StringContent(System.Text.Json.JsonSerializer.Serialize(produto), // objeto p json
-                    System.Text.Encoding.UTF8, "application/json");
 
-                var putResponse = await client.PutAsync($"http://localhost:3000/api/produtos/{item.ProdutoId}", JsonContent);
-                if (!putResponse.IsSuccessStatusCode) throw new Exception("Erro ao atualizar estoque");
+                var content = new StringContent(
+                    JsonSerializer.Serialize(produto),
+                    Encoding.UTF8,
+                    "application/json"
+                );
+
+                var putResponse = await _httpClient.PutAsync(
+                    $"http://localhost:3000/api/produtos/{item.ProdutoId}",
+                    content
+                );
+
+                if (!putResponse.IsSuccessStatusCode)
+                    return StatusCode(500, "Erro ao atualizar estoque");
             }
 
             nota.Status = "Fechada";
             await _context.SaveChangesAsync();
 
-            return Ok("Nota impressa com sucesso");
+            return Ok(new { mensagem = "Nota impressa com sucesso" });
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            return StatusCode(500, $"Erro ao imprimir nota: {e.Message}");
+            return StatusCode(500, new
+            {
+                mensagem = "Erro ao comunicar com o serviço de estoque",
+                detalhe = ex.Message
+            });
         }
     }
 }
