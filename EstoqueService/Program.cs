@@ -7,6 +7,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddControllers();
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        policy => policy.AllowAnyOrigin()
+                        .AllowAnyMethod()
+                        .AllowAnyHeader());
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -18,5 +26,5 @@ app.UseSwagger();
 app.UseSwaggerUI();
 
 app.UseMiddleware<ErrorMiddleware>();
-
+app.UseCors("AllowAll");
 app.Run();
