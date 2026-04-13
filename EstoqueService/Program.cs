@@ -17,4 +17,6 @@ app.MapControllers();
 app.UseSwagger();
 app.UseSwaggerUI();
 
+app.UseMiddleware<ErrorMiddleware>();
+
 app.Run();
