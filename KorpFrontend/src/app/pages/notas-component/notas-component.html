@@ -5,9 +5,9 @@
 
   <div class="form-row">
     <select [(ngModel)]="produtoSelecionadoId">
-      <option [value]="0" disabled selected>Selecione um produto</option>
+      <option [ngValue]="0" disabled>Selecione um produto</option>
       @for (p of produtos(); track p.id) {
-        <option [value]="p.id">{{ p.codigo }} - {{ p.descricao }} (Saldo: {{ p.saldo }})</option>
+        <option [ngValue]="p.id">{{ p.codigo }} - {{ p.descricao }} (Saldo: {{ p.saldo }})</option>
       }
     </select>
 
@@ -132,9 +132,9 @@
 
       <div class="form-row">
         <select [(ngModel)]="produtoSelecionadoEditId">
-          <option [value]="0" disabled selected>Selecione um produto</option>
+          <option [ngValue]="0" disabled>Selecione um produto</option>
           @for (p of produtos(); track p.id) {
-            <option [value]="p.id">
+            <option [ngValue]="p.id">
               {{ p.codigo }} - {{ p.descricao }} (Saldo: {{ p.saldo }})
             </option>
           }

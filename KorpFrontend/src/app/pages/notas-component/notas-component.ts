@@ -20,11 +20,11 @@ export class NotasComponent implements OnInit {
 
   notasExpandidas = new Set<number>();
 
-  produtoSelecionadoId: number = 0;
-  quantidadeSelecionada: number = 1;
+  produtoSelecionadoId = 0;
+  quantidadeSelecionada = 1;
 
-  produtoSelecionadoEditId: number = 0;
-  quantidadeSelecionadaEdit: number = 1;
+  produtoSelecionadoEditId = 0;
+  quantidadeSelecionadaEdit = 1;
 
   novaNota: NotaDTO = {
     status: 'Aberta',
@@ -37,8 +37,13 @@ export class NotasComponent implements OnInit {
   constructor(private api: Api) {}
 
   ngOnInit() {
-    this.carregarNotas();
-    this.carregarProdutos();
+    this.api.getProdutos().subscribe((produtos) => {
+      this.produtos.set(produtos);
+
+      this.api.getNotas().subscribe((notas) => {
+        this.notas.set(notas);
+      });
+    });
   }
 
   carregarNotas() {
@@ -47,45 +52,55 @@ export class NotasComponent implements OnInit {
     });
   }
 
-  carregarProdutos() {
-    this.api.getProdutos().subscribe((res) => {
-      this.produtos.set(res);
-    });
-  }
-
-  // Expansão de notas
+  // UI
   toggleNotaExpandida(notaId: number) {
-    if (this.notasExpandidas.has(notaId)) {
-      this.notasExpandidas.delete(notaId);
-    } else {
-      this.notasExpandidas.add(notaId);
-    }
+    this.notasExpandidas.has(notaId)
+      ? this.notasExpandidas.delete(notaId)
+      : this.notasExpandidas.add(notaId);
   }
 
-  isNotaExpandida(notaId: number): boolean {
+  isNotaExpandida(notaId: number) {
     return this.notasExpandidas.has(notaId);
   }
 
-  adicionarItem() {
-    if (this.produtoSelecionadoId && this.quantidadeSelecionada > 0) {
-      const itemExistente = this.novaNota.itens.find(
-        (item) => item.produtoId === this.produtoSelecionadoId,
-      );
+    // util reutilizavel
+  adicionarOuSomarItem(lista: ItemNota[], produtoId: number, quantidade: number) {
+    const itemExistente = lista.find((item) => item.produtoId === produtoId);
 
-      if (itemExistente) {
-        itemExistente.quantidade += this.quantidadeSelecionada;
-      } else {
-        this.novaNota.itens.push({
-          produtoId: this.produtoSelecionadoId,
-          quantidade: this.quantidadeSelecionada,
-        });
-      }
-
-      this.produtoSelecionadoId = 0;
-      this.quantidadeSelecionada = 1;
+    if (itemExistente) {
+      itemExistente.quantidade += quantidade;
     } else {
-      alert('Selecione um produto e uma quantidade válida!');
+      lista.push({ produtoId, quantidade });
     }
+  }
+
+  normalizarItens(itens: ItemNota[]): ItemNota[] {
+    const mapa = new Map<number, number>();
+
+    for (const item of itens) {
+      mapa.set(item.produtoId, (mapa.get(item.produtoId) || 0) + item.quantidade);
+    }
+
+    return Array.from(mapa.entries()).map(([produtoId, quantidade]) => ({
+      produtoId,
+      quantidade,
+    }));
+  }
+
+  adicionarItem() {
+    if (!this.produtoSelecionadoId || this.quantidadeSelecionada <= 0) {
+      alert('Selecione um produto e uma quantidade válida!');
+      return;
+    }
+
+    this.adicionarOuSomarItem(
+      this.novaNota.itens,
+      this.produtoSelecionadoId,
+      this.quantidadeSelecionada
+    );
+
+    this.produtoSelecionadoId = 0;
+    this.quantidadeSelecionada = 1;
   }
 
   removerItem(index: number) {
@@ -93,28 +108,25 @@ export class NotasComponent implements OnInit {
   }
 
   criarNota() {
-    if (this.novaNota.itens.length === 0) {
+    if (!this.novaNota.itens.length) {
       alert('Adicione pelo menos um produto à nota!');
       return;
     }
 
-    this.api.criarNota(this.novaNota).subscribe({
+    const itensNormalizados = this.normalizarItens(this.novaNota.itens);
+
+    this.api.criarNota({ ...this.novaNota, itens: itensNormalizados }).subscribe({
       next: () => {
         alert('Nota fiscal criada com sucesso!');
         this.carregarNotas();
-        this.novaNota = {
-          status: 'Aberta',
-          itens: [],
-        };
+        this.novaNota = { status: 'Aberta', itens: [] };
       },
     });
   }
 
-  // Editar nota (remover/alterar itens)
-
+  // copia itens da nota original antes da edicao p evitar mutacao
   iniciarEdicaoNota(nota: Nota) {
     this.notaEditando = nota;
-    // fazer copia  dos itens
     this.itensEditados = nota.itens.map((item) => ({ ...item }));
   }
 
@@ -134,31 +146,25 @@ export class NotasComponent implements OnInit {
   }
 
   adicionarItemEditado() {
-    if (this.produtoSelecionadoEditId && this.quantidadeSelecionadaEdit > 0) {
-      const itemExistente = this.itensEditados.find(
-        (item) => item.produtoId === this.produtoSelecionadoEditId,
-      );
-
-      if (itemExistente) {
-        itemExistente.quantidade += this.quantidadeSelecionadaEdit;
-      } else {
-        this.itensEditados.push({
-          produtoId: this.produtoSelecionadoEditId,
-          quantidade: this.quantidadeSelecionadaEdit,
-        });
-      }
-
-      this.produtoSelecionadoEditId = 0;
-      this.quantidadeSelecionadaEdit = 1;
-    } else {
+    if (!this.produtoSelecionadoEditId || this.quantidadeSelecionadaEdit <= 0) {
       alert('Selecione um produto e uma quantidade válida!');
+      return;
     }
+
+    this.adicionarOuSomarItem(
+      this.itensEditados,
+      this.produtoSelecionadoEditId,
+      this.quantidadeSelecionadaEdit
+    );
+
+    this.produtoSelecionadoEditId = 0;
+    this.quantidadeSelecionadaEdit = 1;
   }
 
   salvarEdicaoNota() {
-    if (!this.notaEditando || !this.notaEditando.id) return;
+    if (!this.notaEditando?.id) return;
 
-    if (this.itensEditados.length === 0) {
+    if (!this.itensEditados.length) {
       alert('A nota deve ter pelo menos um item!');
       return;
     }
@@ -175,39 +181,20 @@ export class NotasComponent implements OnInit {
         alert('Nota atualizada com sucesso!');
         this.carregarNotas();
         this.cancelarEdicaoNota();
-        if (this.notaEditando) {
-          this.notasExpandidas.delete(this.notaEditando.id!);
-        }
+        this.notasExpandidas.delete(this.notaEditando!.id!);
       },
     });
   }
 
-  // juntar itens quando sao adicionados em nota ja criada
-  normalizarItens(itens: ItemNota[]): ItemNota[] {
-    const mapa = new Map<number, number>();
-
-    for (const item of itens) {
-      const atual = mapa.get(item.produtoId) || 0;
-      mapa.set(item.produtoId, atual + item.quantidade);
-    }
-
-    return Array.from(mapa.entries()).map(([produtoId, quantidade]) => ({
-      produtoId,
-      quantidade,
-    }));
-  }
-
-  // Impressão
   imprimirNota(id: number) {
     this.api.imprimirNota(id).subscribe({
       next: () => {
-        alert('Nota impressa com sucesso! Status atualizado para Fechada.');
+        alert('Nota impressa com sucesso!');
         this.carregarNotas();
       },
     });
   }
 
-  // Helpers
   getProdutoDescricao(produtoId: number): string {
     const produto = this.produtos().find((p) => p.id === produtoId);
     return produto ? produto.descricao : `Produto ${produtoId}`;
