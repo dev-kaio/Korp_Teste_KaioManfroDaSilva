@@ -2,3 +2,9 @@ bin/
 obj/
 *.dll
 *.pdb
+
+EstoqueService/bin/
+EstoqueService/obj/
+
+FaturamentoService/bin/
+FaturamentoService/obj/
