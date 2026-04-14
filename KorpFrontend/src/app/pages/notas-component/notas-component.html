@@ -82,6 +82,12 @@
             @if (nota.status === 'Aberta') {
               <button class="btn-edit" (click)="iniciarEdicaoNota(nota)">Editar</button>
               <button class="btn-print" (click)="imprimirNota(nota.id!)">Imprimir</button>
+              @if (carregando) {
+                <div class="loading-overlay">
+                  <div class="spinner big"></div>
+                  <p>Processando nota...</p>
+                </div>
+              }
             } @else {
               <button class="btn-expand" (click)="toggleNotaExpandida(nota.id!)">Ver Itens</button>
             }

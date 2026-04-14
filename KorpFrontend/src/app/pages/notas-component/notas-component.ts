@@ -34,6 +34,8 @@ export class NotasComponent implements OnInit {
   notaEditando: Nota | null = null;
   itensEditados: ItemNota[] = [];
 
+  carregando = false;
+
   constructor(private api: Api) {}
 
   ngOnInit() {
@@ -63,7 +65,7 @@ export class NotasComponent implements OnInit {
     return this.notasExpandidas.has(notaId);
   }
 
-    // util reutilizavel
+  // util reutilizavel
   adicionarOuSomarItem(lista: ItemNota[], produtoId: number, quantidade: number) {
     const itemExistente = lista.find((item) => item.produtoId === produtoId);
 
@@ -96,7 +98,7 @@ export class NotasComponent implements OnInit {
     this.adicionarOuSomarItem(
       this.novaNota.itens,
       this.produtoSelecionadoId,
-      this.quantidadeSelecionada
+      this.quantidadeSelecionada,
     );
 
     this.produtoSelecionadoId = 0;
@@ -117,7 +119,6 @@ export class NotasComponent implements OnInit {
 
     this.api.criarNota({ ...this.novaNota, itens: itensNormalizados }).subscribe({
       next: () => {
-        alert('Nota fiscal criada com sucesso!');
         this.carregarNotas();
         this.novaNota = { status: 'Aberta', itens: [] };
       },
@@ -154,7 +155,7 @@ export class NotasComponent implements OnInit {
     this.adicionarOuSomarItem(
       this.itensEditados,
       this.produtoSelecionadoEditId,
-      this.quantidadeSelecionadaEdit
+      this.quantidadeSelecionadaEdit,
     );
 
     this.produtoSelecionadoEditId = 0;
@@ -187,10 +188,19 @@ export class NotasComponent implements OnInit {
   }
 
   imprimirNota(id: number) {
+    this.carregando = true;
+
     this.api.imprimirNota(id).subscribe({
       next: () => {
-        alert('Nota impressa com sucesso!');
         this.carregarNotas();
+      },
+      error: () => {
+        alert('Erro ao imprimir nota!');
+      },
+      complete: () => {
+        setTimeout(() => {
+          this.carregando = false;
+        }, 3000);
       },
     });
   }
