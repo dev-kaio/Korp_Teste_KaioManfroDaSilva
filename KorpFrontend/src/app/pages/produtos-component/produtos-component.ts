@@ -14,6 +14,10 @@ import { FormsModule } from '@angular/forms';
 export class ProdutosComponent implements OnInit {
   produtos = signal<Produto[]>([]);
 
+  mensagemErro = '';
+  mostrar = false;
+  carregando = false;
+
   novoProduto: Produto = {
     codigo: '',
     descricao: '',
@@ -41,24 +45,28 @@ export class ProdutosComponent implements OnInit {
 
   criarProduto() {
     if (this.novoProduto.saldo <= 0) {
-      alert('Saldo deve ser maior que 0!');
+      this.mostrarErro('Saldo deve ser maior que 0!');
       return;
     }
 
     if (!this.novoProduto.codigo || !this.novoProduto.descricao) {
-      alert('Preencha código e descrição!');
+      this.mostrarErro('Preencha código e descrição!');
       return;
     }
 
+    this.carregando = true;
+
     this.api.criarProduto(this.novoProduto).subscribe({
       next: () => {
-        alert('Produto criado com sucesso!');
         this.carregarProdutos();
         this.novoProduto = {
           codigo: '',
           descricao: '',
           saldo: 1,
         };
+      },
+      complete: () => {
+        this.carregando = false;
       },
     });
   }
@@ -78,35 +86,53 @@ export class ProdutosComponent implements OnInit {
   }
 
   salvarEdicao() {
-    if (!this.produtoEditando || !this.produtoEditando.id) return;
+    if (!this.produtoEditando?.id) return;
 
     if (this.produtoEditado.saldo <= 0) {
-      alert('Saldo deve ser maior que 0!');
+      this.mostrarErro('Saldo deve ser maior que 0!');
       return;
     }
 
     if (!this.produtoEditado.codigo || !this.produtoEditado.descricao) {
-      alert('Preencha código e descrição!');
+      this.mostrarErro('Preencha código e descrição!');
       return;
     }
 
+    this.carregando = true;
+
     this.api.atualizarProduto(this.produtoEditando.id, this.produtoEditado).subscribe({
       next: () => {
-        alert('Produto atualizado com sucesso!');
         this.carregarProdutos();
         this.cancelarEdicao();
+      },
+      complete: () => {
+        this.carregando = false;
       },
     });
   }
 
   excluirProduto(id: number, descricao: string) {
-    if (confirm(`Excluir "${descricao}"?`)) {
-      this.api.excluirProduto(id).subscribe({
-        next: () => {
-          alert('Produto excluído!');
-          this.carregarProdutos();
-        },
-      });
-    }
+    if (!confirm(`Excluir "${descricao}"?`)) return;
+
+    this.carregando = true;
+
+    this.api.excluirProduto(id).subscribe({
+      next: () => {
+        this.carregarProdutos();
+      },
+      complete: () => {
+        this.carregando = false;
+      },
+    });
+  }
+
+  mostrarErro(msg: string, duracao = 3000) {
+    this.mensagemErro = msg;
+    this.mostrar = true;
+
+    setTimeout(() => {
+      this.mensagemErro = '';
+      this.mostrar = false;
+    }, duracao);
   }
 }

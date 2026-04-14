@@ -3,46 +3,34 @@ import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
-  console.log(`HTTP Request: ${req.method} ${req.url}`);
-
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error.error instanceof ErrorEvent) {
-        console.error('Client Error:', error.error.message);
-        alert(`Erro de conexão: ${error.error.message}`);
-      } else {
-        console.error(`Server Error:`, {
-          status: error.status,
-          message: error.message,
-          details: error.error,
-        });
+      console.error('Erro HTTP:', error);
 
-        switch (error.status) {
-          case 0:
-            alert('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');
-            break;
-          case 400:
-            alert(`Dados inválidos: ${error.error?.message || 'Verifique os campos preenchidos'}`);
-            break;
-          case 404:
-            alert(`Recurso não encontrado: ${error.error?.message || 'Verifique a URL'}`);
-            break;
-          case 409:
-            alert(`Conflito: ${error.error?.message || 'Já existe um registro com esses dados'}`);
-            break;
-          case 422:
-            alert(`Não processado: ${error.error?.message || 'Saldo insuficiente'}`);
-            break;
-          case 500:
-            alert(`Erro interno do servidor. Tente novamente mais tarde.`);
-            break;
-          default:
-            alert(`Erro ${error.status}: ${error.error?.message || 'Algo deu errado'}`);
-        }
-      }
+      const message = getErrorMessage(error);
 
-      // lança o erro novamente p o component
+      alert(message);
+
       return throwError(() => error);
     }),
   );
 };
+
+function getErrorMessage(error: HttpErrorResponse): string {
+  switch (error.status) {
+    case 0:
+      return 'Servidor indisponível.';
+    case 400:
+      return error.error?.erro || 'Dados inválidos.';
+    case 404:
+      return 'Recurso não encontrado.';
+    case 409:
+      return 'Conflito de dados.';
+    case 422:
+      return 'Regra de negócio inválida (ex: saldo insuficiente).';
+    case 500:
+      return 'Erro interno do servidor.';
+    default:
+      return 'Erro inesperado.';
+  }
+}

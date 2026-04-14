@@ -1,5 +1,15 @@
 <h2>Produtos</h2>
 
+@if (mostrar) {
+  <div class="error-message" style="display: block">
+    {{ mensagemErro }}
+  </div>
+} @else {
+  <div class="error-message" style="display: none">
+    {{ mensagemErro }}
+  </div>
+}
+
 <div class="form-section">
   <h3>Cadastrar Novo Produto</h3>
   <div class="input-group">

@@ -1,5 +1,15 @@
 <h2>Notas Fiscais</h2>
 
+@if (mostrar) {
+  <div class="error-message" style="display: block">
+    {{ mensagemErro }}
+  </div>
+} @else {
+  <div class="error-message" style="display: none">
+    {{ mensagemErro }}
+  </div>
+}
+
 <div class="form-section">
   <h3>Criar Nova Nota Fiscal</h3>
 

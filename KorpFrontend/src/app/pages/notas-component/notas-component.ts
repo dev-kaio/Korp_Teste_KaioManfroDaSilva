@@ -18,6 +18,10 @@ export class NotasComponent implements OnInit {
   notas = signal<Nota[]>([]);
   produtos = signal<Produto[]>([]);
 
+  mostrar = false;
+  mensagemErro = '';
+  carregando = false;
+
   notasExpandidas = new Set<number>();
 
   produtoSelecionadoId = 0;
@@ -33,8 +37,6 @@ export class NotasComponent implements OnInit {
 
   notaEditando: Nota | null = null;
   itensEditados: ItemNota[] = [];
-
-  carregando = false;
 
   constructor(private api: Api) {}
 
@@ -54,7 +56,6 @@ export class NotasComponent implements OnInit {
     });
   }
 
-  // UI
   toggleNotaExpandida(notaId: number) {
     this.notasExpandidas.has(notaId)
       ? this.notasExpandidas.delete(notaId)
@@ -65,7 +66,6 @@ export class NotasComponent implements OnInit {
     return this.notasExpandidas.has(notaId);
   }
 
-  // util reutilizavel
   adicionarOuSomarItem(lista: ItemNota[], produtoId: number, quantidade: number) {
     const itemExistente = lista.find((item) => item.produtoId === produtoId);
 
@@ -91,7 +91,7 @@ export class NotasComponent implements OnInit {
 
   adicionarItem() {
     if (!this.produtoSelecionadoId || this.quantidadeSelecionada <= 0) {
-      alert('Selecione um produto e uma quantidade válida!');
+      this.mostrarErro('Selecione um produto e uma quantidade válida!');
       return;
     }
 
@@ -111,21 +111,25 @@ export class NotasComponent implements OnInit {
 
   criarNota() {
     if (!this.novaNota.itens.length) {
-      alert('Adicione pelo menos um produto à nota!');
+      this.mostrarErro('Adicione pelo menos um produto à nota!');
       return;
     }
 
     const itensNormalizados = this.normalizarItens(this.novaNota.itens);
+
+    this.carregando = true;
 
     this.api.criarNota({ ...this.novaNota, itens: itensNormalizados }).subscribe({
       next: () => {
         this.carregarNotas();
         this.novaNota = { status: 'Aberta', itens: [] };
       },
+      complete: () => {
+        this.carregando = false;
+      },
     });
   }
 
-  // copia itens da nota original antes da edicao p evitar mutacao
   iniciarEdicaoNota(nota: Nota) {
     this.notaEditando = nota;
     this.itensEditados = nota.itens.map((item) => ({ ...item }));
@@ -148,7 +152,7 @@ export class NotasComponent implements OnInit {
 
   adicionarItemEditado() {
     if (!this.produtoSelecionadoEditId || this.quantidadeSelecionadaEdit <= 0) {
-      alert('Selecione um produto e uma quantidade válida!');
+      this.mostrarErro('Selecione um produto e uma quantidade válida!');
       return;
     }
 
@@ -166,7 +170,7 @@ export class NotasComponent implements OnInit {
     if (!this.notaEditando?.id) return;
 
     if (!this.itensEditados.length) {
-      alert('A nota deve ter pelo menos um item!');
+      this.mostrarErro('A nota deve ter pelo menos um item!');
       return;
     }
 
@@ -177,12 +181,16 @@ export class NotasComponent implements OnInit {
       itens: itensNormalizados,
     };
 
+    this.carregando = true;
+
     this.api.atualizarNota(notaAtualizada).subscribe({
       next: () => {
-        alert('Nota atualizada com sucesso!');
         this.carregarNotas();
         this.cancelarEdicaoNota();
         this.notasExpandidas.delete(this.notaEditando!.id!);
+      },
+      complete: () => {
+        this.carregando = false;
       },
     });
   }
@@ -194,13 +202,8 @@ export class NotasComponent implements OnInit {
       next: () => {
         this.carregarNotas();
       },
-      error: () => {
-        alert('Erro ao imprimir nota!');
-      },
       complete: () => {
-        setTimeout(() => {
-          this.carregando = false;
-        }, 3000);
+        this.carregando = false;
       },
     });
   }
@@ -208,5 +211,15 @@ export class NotasComponent implements OnInit {
   getProdutoDescricao(produtoId: number): string {
     const produto = this.produtos().find((p) => p.id === produtoId);
     return produto ? produto.descricao : `Produto ${produtoId}`;
+  }
+
+  mostrarErro(msg: string, duracao = 3000) {
+    this.mensagemErro = msg;
+    this.mostrar = true;
+
+    setTimeout(() => {
+      this.mensagemErro = '';
+      this.mostrar = false;
+    }, duracao);
   }
 }

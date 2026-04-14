@@ -210,3 +210,12 @@ tr:hover {
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
+
+.error-message {
+  background: #ff4d4f;
+  color: white;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-weight: 500;
+}
