@@ -13,6 +13,7 @@ public class ItemNota
 
     [Required]
     public int NotaFiscalId { get; set; } // relação tratada pelo ef
+    public NotaFiscal NotaFiscal { get; set; }
 
     public ItemNota() { }
     public ItemNota(int produtoId, int quantidade)
