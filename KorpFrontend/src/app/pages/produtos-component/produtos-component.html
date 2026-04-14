@@ -1,1 +1,74 @@
-<p>produtos-component works!</p>
+<h2>Produtos</h2>
+
+<div class="form-section">
+  <h3>Cadastrar Novo Produto</h3>
+  <div class="input-group">
+    <div class="input-field">
+      <input [(ngModel)]="novoProduto.codigo" placeholder="Código" />
+    </div>
+    <div class="input-field">
+      <input [(ngModel)]="novoProduto.descricao" placeholder="Descrição" />
+    </div>
+    <div class="input-field">
+      <input [(ngModel)]="novoProduto.saldo" type="number" min="1" placeholder="Saldo" />
+    </div>
+    <button class="btn-create" (click)="criarProduto()">Criar Produto</button>
+  </div>
+</div>
+
+<h3>Lista de Produtos</h3>
+<div class="table-container">
+  <table>
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Descrição</th>
+        <th>Saldo</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (p of produtos(); track p.id) {
+        <tr>
+          <td>{{ p.codigo }}</td>
+          <td>{{ p.descricao }}</td>
+          <td>{{ p.saldo }}</td>
+          <td>
+            <button class="btn-edit" (click)="iniciarEdicao(p)">Editar</button>
+            <button class="btn-delete" (click)="excluirProduto(p.id!, p.descricao)">Excluir</button>
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="4" class="empty-message">Nenhum produto encontrado.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+@if (produtoEditando) {
+  <div class="modal-overlay" (click)="cancelarEdicao()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h3>Editar Produto</h3>
+      <div class="input-group">
+        <div class="input-field">
+          <label>Código</label>
+          <input [(ngModel)]="produtoEditado.codigo" placeholder="Código" />
+        </div>
+        <div class="input-field">
+          <label>Descrição</label>
+          <input [(ngModel)]="produtoEditado.descricao" placeholder="Descrição" />
+        </div>
+        <div class="input-field">
+          <label>Saldo</label>
+          <input [(ngModel)]="produtoEditado.saldo" type="number" min="1" placeholder="Saldo" />
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn-cancel" (click)="cancelarEdicao()">Cancelar</button>
+        <button class="btn-save" (click)="salvarEdicao()">Salvar</button>
+      </div>
+    </div>
+  </div>
+}

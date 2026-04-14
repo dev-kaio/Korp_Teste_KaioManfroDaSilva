@@ -1,9 +1,112 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
+import { Api } from '../../services/api';
+import { Produto } from '../../models/produto';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-produtos-component',
-  imports: [],
+  imports: [CommonModule, FormsModule],
   templateUrl: './produtos-component.html',
+  standalone: true,
   styleUrl: './produtos-component.css',
 })
-export class ProdutosComponent {}
+export class ProdutosComponent implements OnInit {
+  produtos = signal<Produto[]>([]);
+
+  novoProduto: Produto = {
+    codigo: '',
+    descricao: '',
+    saldo: 1,
+  };
+
+  produtoEditando: Produto | null = null;
+  produtoEditado: Produto = {
+    codigo: '',
+    descricao: '',
+    saldo: 0,
+  };
+
+  constructor(private api: Api) {}
+
+  ngOnInit() {
+    this.carregarProdutos();
+  }
+
+  carregarProdutos() {
+    this.api.getProdutos().subscribe((res) => {
+      this.produtos.set(res);
+    });
+  }
+
+  criarProduto() {
+    if (this.novoProduto.saldo <= 0) {
+      alert('Saldo deve ser maior que 0!');
+      return;
+    }
+
+    if (!this.novoProduto.codigo || !this.novoProduto.descricao) {
+      alert('Preencha código e descrição!');
+      return;
+    }
+
+    this.api.criarProduto(this.novoProduto).subscribe({
+      next: () => {
+        alert('Produto criado com sucesso!');
+        this.carregarProdutos();
+        this.novoProduto = {
+          codigo: '',
+          descricao: '',
+          saldo: 1,
+        };
+      },
+    });
+  }
+
+  iniciarEdicao(produto: Produto) {
+    this.produtoEditando = produto;
+    this.produtoEditado = { ...produto };
+  }
+
+  cancelarEdicao() {
+    this.produtoEditando = null;
+    this.produtoEditado = {
+      codigo: '',
+      descricao: '',
+      saldo: 0,
+    };
+  }
+
+  salvarEdicao() {
+    if (!this.produtoEditando || !this.produtoEditando.id) return;
+
+    if (this.produtoEditado.saldo <= 0) {
+      alert('Saldo deve ser maior que 0!');
+      return;
+    }
+
+    if (!this.produtoEditado.codigo || !this.produtoEditado.descricao) {
+      alert('Preencha código e descrição!');
+      return;
+    }
+
+    this.api.atualizarProduto(this.produtoEditando.id, this.produtoEditado).subscribe({
+      next: () => {
+        alert('Produto atualizado com sucesso!');
+        this.carregarProdutos();
+        this.cancelarEdicao();
+      },
+    });
+  }
+
+  excluirProduto(id: number, descricao: string) {
+    if (confirm(`Excluir "${descricao}"?`)) {
+      this.api.excluirProduto(id).subscribe({
+        next: () => {
+          alert('Produto excluído!');
+          this.carregarProdutos();
+        },
+      });
+    }
+  }
+}
