@@ -22,7 +22,40 @@ public class NotasController : ControllerBase
             .Include(n => n.Itens)
             .ToListAsync();
 
-        return Ok(notas);
+        var notasResponse = new List<NotaResponse>();
+
+        foreach (var nota in notas)
+        {
+            var itens = new List<ItemNotaResponse>();
+
+            foreach (var item in nota.Itens)
+            {
+                var response = await _httpClient.GetAsync(
+                    $"http://localhost:3000/api/produtos/{item.ProdutoId}");
+
+                var produtoJson = await response.Content.ReadAsStringAsync();
+
+                var produto = System.Text.Json.JsonSerializer.Deserialize<Produto>(produtoJson,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                itens.Add(new ItemNotaResponse
+                {
+                    ProdutoId = item.ProdutoId,
+                    Quantidade = item.Quantidade,
+                    Descricao = produto?.Descricao ?? "Desconhecido"
+                });
+            }
+
+            notasResponse.Add(new NotaResponse
+            {
+                Id = nota.Id,
+                Numero = nota.Numero,
+                Status = nota.Status,
+                Itens = itens
+            });
+        }
+
+        return Ok(notasResponse);
     }
 
     [HttpGet("{id}")]
@@ -75,8 +108,6 @@ public class NotasController : ControllerBase
 
         if (notaAtualizada.Itens == null || !notaAtualizada.Itens.Any())
             return BadRequest(new { erro = "A nota deve ter pelo menos um item" });
-
-        nota.Numero = notaAtualizada.Numero;
 
         _context.Itens.RemoveRange(nota.Itens);
 

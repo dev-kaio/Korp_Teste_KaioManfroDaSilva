@@ -3,9 +3,6 @@ using System.ComponentModel.DataAnnotations;
 public class NotaFiscal
 {
     public int Id { get; set; }
-
-    [Required]
-    [Range(1, int.MaxValue, ErrorMessage = "O número da nota fiscal deve ser maior que zero.")]
     public int Numero { get; set; }
 
     [Required]
