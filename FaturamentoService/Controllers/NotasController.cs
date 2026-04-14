@@ -49,8 +49,14 @@ public class NotasController : ControllerBase
         _context.Notas.Add(nota);
         await _context.SaveChangesAsync();
 
+        foreach (var item in nota.Itens)
+        {
+            item.NotaFiscalId = nota.Id;
+        }
+
         return CreatedAtAction(nameof(GetNotaById), new { id = nota.Id }, nota);
     }
+
 
     [HttpPost("{id}/imprimir")]
     public async Task<IActionResult> Imprimir(int id)
@@ -65,51 +71,62 @@ public class NotasController : ControllerBase
         if (nota.Status != "Aberta")
             return BadRequest(new { erro = "Nota já foi fechada" });
 
+        using var transaction = await _context.Database.BeginTransactionAsync();
 
-        foreach (var item in nota.Itens)
+        try
         {
-            var getResponse = await _httpClient.GetAsync(
-                $"http://localhost:3000/api/produtos/{item.ProdutoId}");
+            foreach (var item in nota.Itens)
+            {
+                var getResponse = await _httpClient.GetAsync(
+                    $"http://localhost:3000/api/produtos/{item.ProdutoId}");
 
-            if (!getResponse.IsSuccessStatusCode)
-                throw new Exception("Erro ao consultar estoque");
+                if (!getResponse.IsSuccessStatusCode)
+                    throw new Exception("Erro ao consultar estoque");
 
-            var produtoJson = await getResponse.Content.ReadAsStringAsync();
+                var produtoJson = await getResponse.Content.ReadAsStringAsync();
 
-            var produto = System.Text.Json.JsonSerializer.Deserialize<Produto>(
-                produtoJson,
-                new System.Text.Json.JsonSerializerOptions
-                {
-                    PropertyNameCaseInsensitive = true
-                }
-            ) ?? throw new Exception("Erro ao desserializar produto");
+                var produto = System.Text.Json.JsonSerializer.Deserialize<Produto>(
+                    produtoJson,
+                    new System.Text.Json.JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    }
+                ) ?? throw new Exception("Erro ao desserializar produto");
 
-            if (produto.Saldo < item.Quantidade)
-                return BadRequest(new
-                {
-                    erro = $"Produto {produto.Codigo} sem saldo suficiente"
-                });
+                if (produto.Saldo < item.Quantidade)
+                    return BadRequest(new
+                    {
+                        erro = $"Produto {produto.Codigo} sem saldo suficiente"
+                    });
 
-            produto.Saldo -= item.Quantidade;
+                produto.Saldo -= item.Quantidade;
 
-            var jsonContent = new StringContent(
-                System.Text.Json.JsonSerializer.Serialize(produto),
-                System.Text.Encoding.UTF8,
-                "application/json"
-            );
+                var jsonContent = new StringContent(
+                    System.Text.Json.JsonSerializer.Serialize(produto),
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                );
 
-            var putResponse = await _httpClient.PutAsync(
-                $"http://localhost:3000/api/produtos/{item.ProdutoId}",
-                jsonContent
-            );
+                var putResponse = await _httpClient.PutAsync(
+                    $"http://localhost:3000/api/produtos/{item.ProdutoId}",
+                    jsonContent
+                );
 
-            if (!putResponse.IsSuccessStatusCode)
-                throw new Exception("Erro ao atualizar estoque");
+                if (!putResponse.IsSuccessStatusCode)
+                    throw new Exception("Erro ao atualizar estoque");
+            }
+
+            nota.Status = "Fechada";
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+
+            return Ok(new { mensagem = "Nota impressa com sucesso" });
         }
-
-        nota.Status = "Fechada";
-        await _context.SaveChangesAsync();
-
-        return Ok(new { mensagem = "Nota impressa com sucesso" });
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
     }
 }
