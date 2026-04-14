@@ -1,1 +1,194 @@
-<p>notas-component works!</p>
+<h2>Notas Fiscais</h2>
+
+<div class="form-section">
+  <h3>Criar Nova Nota Fiscal</h3>
+
+  <div class="form-row">
+    <select [(ngModel)]="produtoSelecionadoId">
+      <option [value]="0" disabled selected>Selecione um produto</option>
+      @for (p of produtos(); track p.id) {
+        <option [value]="p.id">{{ p.codigo }} - {{ p.descricao }} (Saldo: {{ p.saldo }})</option>
+      }
+    </select>
+
+    <input [(ngModel)]="quantidadeSelecionada" type="number" min="1" placeholder="Quantidade" />
+
+    <button class="btn-add" (click)="adicionarItem()">Adicionar</button>
+  </div>
+
+  <h4>Itens da Nota</h4>
+  <div class="table-container items-table">
+    <table>
+      <thead>
+        <tr>
+          <th>Produto</th>
+          <th>Quantidade</th>
+          <th>Ação</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (item of novaNota.itens; track item.produtoId; let i = $index) {
+          <tr>
+            <td>{{ getProdutoDescricao(item.produtoId) }}</td>
+            <td>{{ item.quantidade }}</td>
+            <td>
+              <button class="btn-delete" (click)="removerItem(i)">Remover</button>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="3" class="empty-message">Nenhum item adicionado.</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <button class="btn-create" (click)="criarNota()">Criar Nota Fiscal</button>
+</div>
+
+<h3>Notas Fiscais Existentes</h3>
+<div class="notes-table">
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 50px"></th>
+        <th>Número</th>
+        <th>Status</th>
+        <th>Itens</th>
+        <th>Ação</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (nota of notas(); track nota.id) {
+        <tr>
+          <td>
+            <button class="btn-expand" (click)="toggleNotaExpandida(nota.id!)">
+              {{ isNotaExpandida(nota.id!) ? '▼' : '▶' }}
+            </button>
+          </td>
+          <td>{{ nota.numero }}</td>
+          <td>
+            <span
+              [class.status-badge]="true"
+              [class.status-open]="nota.status === 'Aberta'"
+              [class.status-closed]="nota.status === 'Fechada'"
+            >
+              {{ nota.status }}
+            </span>
+          </td>
+          <td>{{ nota.itens.length || 0 }}</td>
+          <td>
+            @if (nota.status === 'Aberta') {
+              <button class="btn-edit" (click)="iniciarEdicaoNota(nota)">Editar</button>
+              <button class="btn-print" (click)="imprimirNota(nota.id!)">Imprimir</button>
+            } @else {
+              <button class="btn-expand" (click)="toggleNotaExpandida(nota.id!)">Ver Itens</button>
+            }
+          </td>
+        </tr>
+        <!-- Linha de itens expandida -->
+        @if (isNotaExpandida(nota.id!)) {
+          <tr class="expanded-row">
+            <td colspan="5">
+              <div class="expanded-content">
+                <h4>Itens da Nota {{ nota.numero }}</h4>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Produto</th>
+                      <th>Quantidade</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (item of nota.itens; track item.produtoId) {
+                      <tr>
+                        <td>{{ getProdutoDescricao(item.produtoId) }}</td>
+                        <td>{{ item.quantidade }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </td>
+          </tr>
+        }
+      } @empty {
+        <tr>
+          <td colspan="5" class="empty-message">Nenhuma nota fiscal encontrada.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal de Edição de Nota -->
+@if (notaEditando) {
+  <div class="modal-overlay" (click)="cancelarEdicaoNota()">
+    <p class="info">Alterações só afetam o estoque após imprimir a nota.</p>
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <h3>Editar Nota {{ notaEditando.numero }}</h3>
+      <p>Adicione ou remova itens da nota:</p>
+
+      <div class="form-row">
+        <select [(ngModel)]="produtoSelecionadoEditId">
+          <option [value]="0" disabled selected>Selecione um produto</option>
+          @for (p of produtos(); track p.id) {
+            <option [value]="p.id">
+              {{ p.codigo }} - {{ p.descricao }} (Saldo: {{ p.saldo }})
+            </option>
+          }
+        </select>
+
+        <input
+          [(ngModel)]="quantidadeSelecionadaEdit"
+          type="number"
+          min="1"
+          placeholder="Quantidade"
+        />
+
+        <button class="btn-add" (click)="adicionarItemEditado()">Adicionar Item</button>
+      </div>
+
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Quantidade</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of itensEditados; track item.produtoId; let i = $index) {
+              <tr>
+                <td>{{ getProdutoDescricao(item.produtoId) }}</td>
+                <td>
+                  <input
+                    type="number"
+                    [ngModel]="item.quantidade"
+                    (ngModelChange)="alterarQuantidadeItem(i, $event)"
+                    min="1"
+                    style="width: 80px"
+                  />
+                </td>
+                <td>
+                  <button class="btn-delete" (click)="removerItemEditado(i)">Remover</button>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="3" class="empty-message">Nenhum item.</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn-cancel" (click)="cancelarEdicaoNota()">Cancelar</button>
+        <button class="btn-save" (click)="salvarEdicaoNota()">Salvar</button>
+      </div>
+    </div>
+  </div>
+}

@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Produto } from '../models/produto';
 import { Nota } from '../models/nota';
+import { NotaDTO } from '../models/NotaDTO';
 
 @Injectable({
   providedIn: 'root',
@@ -31,7 +32,7 @@ export class Api {
     return this.http.get<Nota[]>('http://localhost:5046/api/notas');
   }
 
-  criarNota(nota: Nota) {
+  criarNota(nota: NotaDTO) {
     return this.http.post<Nota>('http://localhost:5046/api/notas', nota);
   }
 
