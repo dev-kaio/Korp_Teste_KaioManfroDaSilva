@@ -44,6 +44,9 @@ public class NotasController : ControllerBase
         if (nota.Itens == null || !nota.Itens.Any())
             return BadRequest(new { erro = "A nota deve ter pelo menos um item" });
 
+        var ultimoNumero = await _context.Notas.MaxAsync(n => (int?)n.Numero) ?? 0;
+        nota.Numero = ultimoNumero + 1;
+
         nota.Status = "Aberta";
 
         _context.Notas.Add(nota);
