@@ -1,10 +1,34 @@
-bin/
-obj/
-*.dll
-*.pdb
+# =========================
+# .NET (Estoque + Faturamento)
+# =========================
+**/bin/
+**/obj/
+*.user
+*.suo
+*.cache
 
-EstoqueService/bin/
-EstoqueService/obj/
+# =========================
+# Angular / Node
+# =========================
+**/node_modules/
+**/dist/
+**/.angular/
+**/.tmp/
+**/out-tsc/
 
-FaturamentoService/bin/
-FaturamentoService/obj/
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# =========================
+# IDEs
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
