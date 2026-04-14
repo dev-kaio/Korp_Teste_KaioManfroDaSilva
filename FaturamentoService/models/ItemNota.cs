@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 public class ItemNota
 {
@@ -13,8 +14,8 @@ public class ItemNota
 
     [Required]
     public int NotaFiscalId { get; set; } // relação tratada pelo ef
-    public NotaFiscal NotaFiscal { get; set; }
-
+    [JsonIgnore]
+    public NotaFiscal? NotaFiscal { get; set; }
     public ItemNota() { }
     public ItemNota(int produtoId, int quantidade)
     {

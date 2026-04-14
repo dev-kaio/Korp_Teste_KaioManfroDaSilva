@@ -57,6 +57,67 @@ public class NotasController : ControllerBase
         return CreatedAtAction(nameof(GetNotaById), new { id = nota.Id }, nota);
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> AtualizarNota(int id, NotaFiscal notaAtualizada)
+    {
+        var nota = await _context.Notas
+            .Include(n => n.Itens)
+            .FirstOrDefaultAsync(n => n.Id == id);
+
+        if (nota == null)
+            return NotFound(new { erro = "Nota não encontrada" });
+
+        if (nota.Status != "Aberta")
+            return BadRequest(new { erro = "Não é possível alterar uma nota fechada" });
+
+        if (notaAtualizada.Itens == null || !notaAtualizada.Itens.Any())
+            return BadRequest(new { erro = "A nota deve ter pelo menos um item" });
+
+        nota.Numero = notaAtualizada.Numero;
+
+        _context.Itens.RemoveRange(nota.Itens);
+
+        var novosItens = notaAtualizada.Itens.Select(i => new ItemNota
+        {
+            ProdutoId = i.ProdutoId,
+            Quantidade = i.Quantidade,
+            NotaFiscalId = nota.Id
+        }).ToList();
+
+        await _context.Itens.AddRangeAsync(novosItens);
+
+        nota.Itens = novosItens;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(nota);
+    }
+
+    [HttpDelete("{id}/itens/{itemId}")]
+    public async Task<IActionResult> RemoverItem(int id, int itemId)
+    {
+        var nota = await _context.Notas
+            .Include(n => n.Itens)
+            .FirstOrDefaultAsync(n => n.Id == id);
+
+        if (nota == null)
+            return NotFound(new { erro = "Nota não encontrada" });
+
+        if (nota.Status != "Aberta")
+            return BadRequest(new { erro = "Não é possível alterar uma nota fechada" });
+
+        var item = nota.Itens.FirstOrDefault(i => i.Id == itemId);
+
+        if (item == null)
+            return NotFound(new { erro = "Item não encontrado" });
+
+        _context.Itens.Remove(item);
+
+        await _context.SaveChangesAsync();
+
+        return Ok(nota);
+    }
+
 
     [HttpPost("{id}/imprimir")]
     public async Task<IActionResult> Imprimir(int id)
