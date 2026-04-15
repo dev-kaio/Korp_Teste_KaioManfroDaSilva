@@ -117,15 +117,10 @@ export class NotasComponent implements OnInit {
 
     const itensNormalizados = this.normalizarItens(this.novaNota.itens);
 
-    this.carregando = true;
-
     this.api.criarNota({ ...this.novaNota, itens: itensNormalizados }).subscribe({
       next: () => {
         this.carregarNotas();
         this.novaNota = { status: 'Aberta', itens: [] };
-      },
-      complete: () => {
-        this.carregando = false;
       },
     });
   }
@@ -181,29 +176,19 @@ export class NotasComponent implements OnInit {
       itens: itensNormalizados,
     };
 
-    this.carregando = true;
-
     this.api.atualizarNota(notaAtualizada).subscribe({
       next: () => {
         this.carregarNotas();
         this.cancelarEdicaoNota();
         this.notasExpandidas.delete(this.notaEditando!.id!);
       },
-      complete: () => {
-        this.carregando = false;
-      },
     });
   }
 
   imprimirNota(id: number) {
-    this.carregando = true;
-
     this.api.imprimirNota(id).subscribe({
       next: () => {
         this.carregarNotas();
-      },
-      complete: () => {
-        this.carregando = false;
       },
     });
   }

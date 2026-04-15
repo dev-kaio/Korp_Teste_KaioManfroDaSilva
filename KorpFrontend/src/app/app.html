@@ -1,5 +1,12 @@
 <h1>Korp ERP - Sistema de Notas Fiscais</h1>
 
+@if (loadingService.loading()) {
+  <div class="loading-overlay">
+    <div class="spinner big"></div>
+    <p>Carregando...</p>
+  </div>
+}
+
 <div class="nav-links">
   <a routerLink="/produtos" routerLinkActive="ativo">Produtos</a>
   <a routerLink="/notas" routerLinkActive="ativo">Notas</a>

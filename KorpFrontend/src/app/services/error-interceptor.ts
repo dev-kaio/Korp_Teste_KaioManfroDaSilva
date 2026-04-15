@@ -1,17 +1,25 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
+import { catchError, throwError, finalize } from 'rxjs';
+import { LoadingService } from '../services/loading';
 
 export const errorInterceptor: HttpInterceptorFn = (req, next) => {
+  const loading = inject(LoadingService);
+
+  loading.show();
+
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
       console.error('Erro HTTP:', error);
 
       const message = getErrorMessage(error);
-
       alert(message);
 
       return throwError(() => error);
+    }),
+
+    finalize(() => {
+      loading.hide();
     }),
   );
 };

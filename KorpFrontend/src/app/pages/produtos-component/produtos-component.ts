@@ -16,7 +16,6 @@ export class ProdutosComponent implements OnInit {
 
   mensagemErro = '';
   mostrar = false;
-  carregando = false;
 
   novoProduto: Produto = {
     codigo: '',
@@ -54,8 +53,6 @@ export class ProdutosComponent implements OnInit {
       return;
     }
 
-    this.carregando = true;
-
     this.api.criarProduto(this.novoProduto).subscribe({
       next: () => {
         this.carregarProdutos();
@@ -64,9 +61,6 @@ export class ProdutosComponent implements OnInit {
           descricao: '',
           saldo: 1,
         };
-      },
-      complete: () => {
-        this.carregando = false;
       },
     });
   }
@@ -98,15 +92,10 @@ export class ProdutosComponent implements OnInit {
       return;
     }
 
-    this.carregando = true;
-
     this.api.atualizarProduto(this.produtoEditando.id, this.produtoEditado).subscribe({
       next: () => {
         this.carregarProdutos();
         this.cancelarEdicao();
-      },
-      complete: () => {
-        this.carregando = false;
       },
     });
   }
@@ -114,14 +103,9 @@ export class ProdutosComponent implements OnInit {
   excluirProduto(id: number, descricao: string) {
     if (!confirm(`Excluir "${descricao}"?`)) return;
 
-    this.carregando = true;
-
     this.api.excluirProduto(id).subscribe({
       next: () => {
         this.carregarProdutos();
-      },
-      complete: () => {
-        this.carregando = false;
       },
     });
   }
