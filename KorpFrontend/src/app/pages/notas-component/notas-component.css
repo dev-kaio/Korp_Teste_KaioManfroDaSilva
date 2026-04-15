@@ -160,6 +160,7 @@ tr:hover {
   background: rgba(15, 23, 42, 0.8);
   display: flex;
   align-items: center;
+  flex-direction: column;
   justify-content: center;
 }
 
